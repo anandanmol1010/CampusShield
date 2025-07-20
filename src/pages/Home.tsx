@@ -112,34 +112,32 @@ const Home: React.FC = () => {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                title: 'Ragging',
-                description: 'Any form of ragging, bullying, or intimidation by senior students.',
-                color: 'red'
-              },
-              {
-                title: 'Harassment',
-                description: 'Sexual harassment, discrimination, or any form of inappropriate behavior.',
-                color: 'orange'
-              },
-              {
-                title: 'Mental Health',
-                description: 'Concerns about mental health support, counseling, or psychological well-being.',
-                color: 'blue'
-              },
-              {
-                title: 'Faculty Misconduct',
-                description: 'Inappropriate behavior, bias, or unprofessional conduct by faculty members.',
-                color: 'purple'
-              },
-              {
-                title: 'Others',
-                description: 'Any other campus-related issues that don\'t fit into the above categories.',
-                color: 'gray'
-              }
-            ].map((category, index) => (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[{
+              title: 'Ragging',
+              description: 'Any form of ragging, bullying, or intimidation by senior students.',
+              color: 'red'
+            },
+            {
+              title: 'Harassment',
+              description: 'Sexual harassment, discrimination, or any form of inappropriate behavior.',
+              color: 'orange'
+            },
+            {
+              title: 'Mental Health',
+              description: 'Concerns about mental health support, counseling, or psychological well-being.',
+              color: 'blue'
+            },
+            {
+              title: 'Faculty Misconduct',
+              description: 'Inappropriate behavior, bias, or unprofessional conduct by faculty members.',
+              color: 'purple'
+            },
+            {
+              title: 'Others',
+              description: 'Any other campus-related issues that don\'t fit into the above categories.',
+              color: 'gray'
+            }].map((category, index) => (
               <div key={index} className="bg-slate-50 p-6 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors">
                 <h3 className="text-lg font-semibold text-slate-900 mb-3">{category.title}</h3>
                 <p className="text-slate-600 text-sm leading-relaxed">{category.description}</p>

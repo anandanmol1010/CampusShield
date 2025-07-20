@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, AlertCircle, Clock, Eye, CheckCircle } from 'lucide-react';
+import { Search, AlertCircle, Clock, Eye, CheckCircle, FileText, Calendar, Edit3 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -8,11 +8,23 @@ interface ComplaintData {
   category: string;
   description: string;
   dateSubmitted: string;
-  status: 'pending' | 'in-review' | 'resolved';
-  adminNotes: string;
-  hasAttachment: boolean;
-  timestamp: any;
-  fileURL: string;
+  status: 'pending' | 'in-review' | 'resolved' | 'Pending' | 'In-Review' | 'Resolved';
+  adminNotes?: string;
+  adminNotesHistory?: Array<{
+    note: string;
+    timestamp: string;
+    adminId?: string;
+  }>;
+  hasAttachment?: boolean;
+  timestamp?: any;
+  fileURL?: string;
+  timeline?: Array<{
+    date: string;
+    action: string;
+    notes: string;
+    type?: string;
+  }>;
+  lastUpdated?: string;
 }
 
 const TrackComplaint: React.FC = () => {
@@ -30,16 +42,30 @@ const TrackComplaint: React.FC = () => {
     setError('');
 
     try {
-      const q = query(collection(db, 'complaints'), where('ticketId', '==', ticketId));
-      const querySnapshot = await getDocs(q);
+      // Try searching with ticketId field first
+      const q1 = query(collection(db, 'complaints'), where('ticketId', '==', ticketId));
+      let querySnapshot = await getDocs(q1);
+      
+      // If no results, try with ticketID field (capital ID)
+      if (querySnapshot.empty) {
+        const q2 = query(collection(db, 'complaints'), where('ticketID', '==', ticketId));
+        querySnapshot = await getDocs(q2);
+      }
 
       if (querySnapshot.empty) {
         setNotFound(true);
         setComplaintData(null);
       } else {
-        querySnapshot.forEach((doc) => {
-          setComplaintData(doc.data() as ComplaintData);
-        });
+        const docData = querySnapshot.docs[0].data();
+        // Normalize the data structure
+        const normalizedData = {
+          ...docData,
+          ticketId: docData.ticketID || docData.ticketId,
+          dateSubmitted: docData.timestamp ? new Date(docData.timestamp.seconds * 1000).toLocaleDateString() : docData.dateSubmitted,
+          status: docData.status.toLowerCase()
+        } as ComplaintData;
+        
+        setComplaintData(normalizedData);
         setNotFound(false);
       }
     } catch (err) {
@@ -51,13 +77,14 @@ const TrackComplaint: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
+    const normalizedStatus = status.toLowerCase();
     const statusConfig = {
       pending: { color: 'bg-amber-100 text-amber-800 border-amber-200', icon: Clock, text: 'Pending' },
       'in-review': { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: Eye, text: 'In Review' },
       resolved: { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle, text: 'Resolved' }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig];
+    const config = statusConfig[normalizedStatus as keyof typeof statusConfig] || statusConfig.pending;
     const Icon = config.icon;
 
     return (
@@ -135,55 +162,184 @@ const TrackComplaint: React.FC = () => {
 
         {/* Results */}
         {complaintData && (
-          <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
-            <div className="mb-6">
+          <div className="space-y-8">
+            {/* Header */}
+            <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-slate-900">Complaint Details</h2>
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">Case Details</h1>
+                  <p className="text-slate-600">Ticket ID: <span className="font-mono font-medium">{complaintData.ticketId}</span></p>
+                </div>
                 {getStatusBadge(complaintData.status)}
-              </div>
-              <div className="text-sm text-slate-500 mb-4">
-                Ticket ID: <span className="font-mono font-medium text-slate-700">{complaintData.ticketId}</span>
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-2">Category</h3>
-                  <p className="text-slate-700">{getCategoryDisplayName(complaintData.category)}</p>
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Main Content */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* Case Information */}
+                <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+                  <h2 className="text-lg font-semibold text-slate-900 mb-6">Case Information</h2>
+                  
+                  <div className="grid sm:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-700 mb-2">Category</h3>
+                      <p className="text-slate-900">{getCategoryDisplayName(complaintData.category)}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-700 mb-2">Date Submitted</h3>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-slate-500" />
+                        <span className="text-slate-900">{new Date(complaintData.dateSubmitted).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium text-slate-700 mb-2">Description</h3>
+                    <div className="bg-slate-50 p-4 rounded-lg">
+                      <p className="text-slate-900 leading-relaxed">{complaintData.description}</p>
+                    </div>
+                  </div>
+
+                  {complaintData.fileURL && complaintData.fileURL.trim() !== '' && (
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-700 mb-2">Attachments</h3>
+                      <div className="bg-slate-50 p-4 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-5 w-5 text-slate-500" />
+                          <span className="text-slate-900">Evidence File</span>
+                          <span className="text-xs text-slate-500">(Viewable by administrators only)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-2">Date Submitted</h3>
-                  <p className="text-slate-700">{new Date(complaintData.dateSubmitted).toLocaleDateString()}</p>
+
+                {/* Timeline */}
+                <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+                  <h2 className="text-lg font-semibold text-slate-900 mb-6">Case Timeline</h2>
+                  
+                  <div className="space-y-4">
+                    {/* Add initial case creation entry if timeline is empty */}
+                    {(!complaintData.timeline || complaintData.timeline.length === 0) && (
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="text-sm font-medium text-slate-900">Case Created</h3>
+                            <span className="text-xs text-slate-500">{new Date(complaintData.dateSubmitted).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-sm text-slate-600">Complaint submitted and case opened</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Show timeline events */}
+                    {(complaintData.timeline && complaintData.timeline.length > 0) ? (
+                      complaintData.timeline.map((event, index) => {
+                        const getEventIcon = (type: string) => {
+                          switch (type) {
+                            case 'status_change':
+                              return <CheckCircle className="h-4 w-4 text-green-600" />;
+                            case 'admin_note':
+                              return <Edit3 className="h-4 w-4 text-blue-600" />;
+                            case 'case_created':
+                              return <FileText className="h-4 w-4 text-blue-600" />;
+                            default:
+                              return <Clock className="h-4 w-4 text-slate-600" />;
+                          }
+                        };
+                        
+                        const getEventBgColor = (type: string) => {
+                          switch (type) {
+                            case 'status_change':
+                              return 'bg-green-100';
+                            case 'admin_note':
+                              return 'bg-blue-100';
+                            case 'case_created':
+                              return 'bg-blue-100';
+                            default:
+                              return 'bg-slate-100';
+                          }
+                        };
+                        
+                        return (
+                          <div key={index} className="flex items-start space-x-4">
+                            <div className={`flex-shrink-0 w-8 h-8 ${getEventBgColor(event.type || '')} rounded-full flex items-center justify-center`}>
+                              {getEventIcon(event.type || '')}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <h3 className="text-sm font-medium text-slate-900">{event.action}</h3>
+                                <span className="text-xs text-slate-500">{new Date(event.date).toLocaleDateString()} at {new Date(event.date).toLocaleTimeString()}</span>
+                              </div>
+                              <p className="text-sm text-slate-600">{event.notes}</p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-slate-500 text-sm">Timeline will show updates as the case progresses.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900 mb-2">Description</h3>
-                <p className="text-slate-700 bg-slate-50 p-4 rounded-lg leading-relaxed">
-                  {complaintData.description}
-                </p>
-              </div>
-
-              {complaintData.hasAttachment && (
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-2">Attachments</h3>
-                  <div className="bg-slate-50 p-4 rounded-lg">
-                    <p className="text-slate-600 text-sm">
-                      📎 Evidence file attached (viewable by administrators only)
+              {/* Sidebar */}
+              <div className="space-y-8">
+                {/* Current Status */}
+                <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+                  <h2 className="text-lg font-semibold text-slate-900 mb-4">Current Status</h2>
+                  <div className="text-center">
+                    {getStatusBadge(complaintData.status)}
+                    <p className="text-sm text-slate-600 mt-3">
+                      {complaintData.lastUpdated && (
+                        <>Last updated: {new Date(complaintData.lastUpdated).toLocaleDateString()}</>
+                      )}
                     </p>
                   </div>
                 </div>
-              )}
 
-              {complaintData.adminNotes && (
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 mb-2">Admin Notes</h3>
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <p className="text-blue-800">{complaintData.adminNotes}</p>
+                {/* Admin Updates */}
+                {complaintData.adminNotes && (
+                  <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+                    <h2 className="text-lg font-semibold text-slate-900 mb-4">Latest Admin Update</h2>
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <p className="text-blue-800 text-sm leading-relaxed">{complaintData.adminNotes}</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {/* Admin Notes History */}
+                {complaintData.adminNotesHistory && complaintData.adminNotesHistory.length > 0 && (
+                  <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+                    <h2 className="text-lg font-semibold text-slate-900 mb-4">Admin Updates History</h2>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {complaintData.adminNotesHistory
+                        .slice()
+                        .reverse() // Show latest first
+                        .map((noteEntry, index) => (
+                        <div key={index} className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-slate-600">
+                              Admin Update
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {new Date(noteEntry.timestamp).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-800 leading-relaxed">{noteEntry.note}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

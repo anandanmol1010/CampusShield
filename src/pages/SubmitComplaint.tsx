@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Upload, AlertCircle, CheckCircle } from 'lucide-react';
+import { FileText, Upload, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { uploadFile } from '../../lib/cloudinary';
 import { generateTicketID } from '../../lib/ticketID';
@@ -15,9 +15,11 @@ const SubmitComplaint: React.FC = () => {
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [ticketId, setTicketId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true); // Start loading
     const newTicketId = generateTicketID();
     let fileURL = '';
 
@@ -43,6 +45,8 @@ const SubmitComplaint: React.FC = () => {
       setIsSubmitted(true);
     } catch (error) {
       console.error('Error submitting complaint:', error);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
@@ -223,9 +227,20 @@ const SubmitComplaint: React.FC = () => {
             <div className="pt-4">
               <button
                 type="submit"
-                className="w-full bg-blue-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-blue-700 transform hover:scale-[1.02] transition-all duration-200 shadow-lg hover:shadow-xl"
+                disabled={isLoading}
+                className="w-full bg-blue-600 text-white py-4 px-6 rounded-xl font-semibold text-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
               >
-                Submit Complaint
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-5 w-5" />
+                    <span>Submit Complaint</span>
+                  </>
+                )}
               </button>
               <p className="text-sm text-slate-500 text-center mt-3">
                 You'll receive a ticket ID to track your complaint status

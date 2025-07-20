@@ -67,6 +67,7 @@ const AdminLogin: React.FC = () => {
                 id="email"
                 value={credentials.email}
                 onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                placeholder="Enter your admin email"
                 className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 required
               />
@@ -82,6 +83,7 @@ const AdminLogin: React.FC = () => {
                   id="password"
                   value={credentials.password}
                   onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  placeholder="Enter your admin password"
                   className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   required
                 />
