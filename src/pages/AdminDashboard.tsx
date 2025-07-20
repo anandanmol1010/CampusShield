@@ -130,7 +130,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleExport = () => {
     const headers = ["Ticket ID", "Category", "Status", "Description", "Contact Email", "Contact Phone", "Date Submitted", "Time Submitted", "Image URL", "Admin Notes"];
-    const data = complaints.map(c => {
+    const data = filteredComplaints.map(c => {
       const date = typeof c.dateSubmitted === 'string' ? new Date(c.dateSubmitted) : c.dateSubmitted;
       const dateString = date.toLocaleDateString();
       const timeString = date.toLocaleTimeString();
@@ -333,7 +333,7 @@ const AdminDashboard: React.FC = () => {
                     <td className="px-6 py-4">
                       <Link 
                         to={`/admin/case/${complaint.ticketId}`}
-                        className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                        className="inline-flex items-center space-x-1 px-2 py-1 text-sm bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Eye className="h-4 w-4" />
