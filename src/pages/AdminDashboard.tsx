@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Settings, LogOut, Filter, Download, Eye, FileText, Mail, Phone, X } from 'lucide-react';
-import { db } from '../../lib/firebase';
+import { db, auth } from '../../lib/firebase';
 import { collection, onSnapshot, doc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth';
 import * as XLSX from 'xlsx';
 
 interface ComplaintData {
@@ -49,9 +50,14 @@ const AdminDashboard: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAdminAuthenticated');
-    navigate('/admin-login');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem('isAdminAuthenticated');
+      navigate('/admin-login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   React.useEffect(() => {

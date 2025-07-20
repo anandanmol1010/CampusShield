@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Lock, Eye, EyeOff } from 'lucide-react';
 import { auth } from '../../lib/firebase';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, setPersistence, browserSessionPersistence } from 'firebase/auth';
 
 const AdminLogin: React.FC = () => {
   const [credentials, setCredentials] = useState({
@@ -12,7 +12,21 @@ const AdminLogin: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // User is already logged in, redirect to admin dashboard
+        navigate('/admin', { replace: true });
+      }
+      setCheckingAuth(false);
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +34,10 @@ const AdminLogin: React.FC = () => {
     setError('');
 
     try {
+      // Set session-only persistence (logout on browser/tab close)
+      await setPersistence(auth, browserSessionPersistence);
+      
+      // Sign in with session persistence
       await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
       localStorage.setItem('isAdminAuthenticated', 'true');
       navigate('/admin');
@@ -40,6 +58,18 @@ const AdminLogin: React.FC = () => {
       console.error('Logout error:', err);
     }
   };
+
+  // Show loading while checking auth state
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-slate-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-20 px-4 sm:px-6 lg:px-8">

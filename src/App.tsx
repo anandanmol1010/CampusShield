@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import SubmitComplaint from './pages/SubmitComplaint';
 import TrackComplaint from './pages/TrackComplaint';
@@ -17,8 +18,16 @@ function App() {
           <Route path="/submit" element={<SubmitComplaint />} />
           <Route path="/track" element={<TrackComplaint />} />
           <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/case/:ticketId" element={<CaseDetails />} />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/case/:ticketId" element={
+            <ProtectedRoute>
+              <CaseDetails />
+            </ProtectedRoute>
+          } />
         </Routes>
       </Layout>
     </Router>
